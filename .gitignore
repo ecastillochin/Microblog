@@ -1,0 +1,10 @@
+*.py[cod]
+
+dist
+build
+lib
+lib64
+__pycache__
+
+venv
+app.db
