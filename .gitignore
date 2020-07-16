@@ -5,6 +5,7 @@ build
 lib
 lib64
 __pycache__
+logs
 
 venv
 app.db
