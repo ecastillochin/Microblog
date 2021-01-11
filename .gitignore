@@ -9,3 +9,5 @@ logs
 
 venv
 app.db
+
+.vscode
