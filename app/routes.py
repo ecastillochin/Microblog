@@ -11,6 +11,8 @@ from flask_login import login_required
 from flask import request
 from werkzeug.urls import url_parse
 from app.forms import EmptyForm
+from app.forms import PostForm
+from app.models import Post
 
 
 @app.before_request
@@ -20,23 +22,19 @@ def before_request():
         db.session.commit()
 
 
-@app.route('/')
-@app.route('/index')
+@app.route('/',methods=['GET','POST'])
+@app.route('/index',methods=['GET','POST'])
 @login_required
 def index():
-    # user = {'username': 'Roger'}
-    posts = [
-        {
-            'author': {'username': 'John'},
-            'body': 'Beautiful day in Portland!'
-        },
-        {
-            'author': {'username': 'Susan'},
-            'body': 'The Avengers movie was so cool!'
-        }
-    ]
-
-    return render_template('index.html', title='Home', posts=posts)
+    form = PostForm()
+    if form.validate_on_submit():
+        post = Post(body=form.post.data, author=current_user)
+        db.session.add(post)
+        db.session.commit()
+        flash('Your post is now live!!')
+        return redirect(url_for('index'))
+    posts = current_user.followed_posts().all()
+    return render_template('index.html', title='Home', form=form, posts=posts)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -127,21 +125,27 @@ def follow(username):
     else:
         return redirect(url_for('index'))
 
-@app.route('/unfollow/<username>',methods=['POST'])
+@app.route('/unfollow/<username>', methods=['POST'])
 @login_required
 def unfollow(username):
     form = EmptyForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=username).first()
         if user is None:
-            flash('User {} not found. '.format(username))
+            flash('User {} not found.'.format(username))
             return redirect(url_for('index'))
         if user == current_user:
-            flash('You cannot follow yourself!')
+            flash('You cannot unfollow yourself!')
             return redirect(url_for('user', username=username))
         current_user.unfollow(user)
         db.session.commit()
-        flash('You are following {} !'.format(username))
+        flash('You are not following {}.'.format(username))
         return redirect(url_for('user', username=username))
     else:
         return redirect(url_for('index'))
+
+@app.route('/explore')
+@login_required
+def explore():
+    posts = Post.query.order_by(Post.timestamp.desc()).all()
+    return render_template('index.html',title='Explore', posts=posts)
